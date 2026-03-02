@@ -1,0 +1,27 @@
+stages:
+  - build
+  - push
+  - deploy
+
+variables:
+  IMAGE_NAME: repo/nginx-exam
+  IMAGE_TAG: $CI_COMMIT_SHORT_SHA
+
+build_image:
+  stage: build
+  script:
+    - docker build -t $IMAGE_NAME:$IMAGE_TAG .
+
+push_image:
+  stage: push
+  script:
+    - docker login -u $DOCKER_USER -p $DOCKER_PASSWORD
+    - docker push $IMAGE_NAME:$IMAGE_TAG
+
+deploy_k8s:
+  stage: deploy
+  image: bitnami/kubectl:latest
+  script:
+    - kubectl config use-context my-gitlab-k8s-agent
+    - kubectl set image deployment/nginx-deployment nginx=$IMAGE_NAME:$IMAGE_TAG -n devops-exam
+    - kubectl rollout status deployment/nginx-deployment -n devops-exam
